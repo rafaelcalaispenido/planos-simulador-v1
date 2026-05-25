@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planos eNotas</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#fff;font-family:'DM Sans','Segoe UI',sans-serif;color:#111;}
+
+    .page{display:flex;gap:48px;max-width:1100px;margin:0 auto;padding:60px 24px 80px;align-items:flex-start;}
+    .left{flex:0 0 320px;position:sticky;top:40px;}
+    .left .eyebrow{font-size:12px;font-weight:700;color:#F46036;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+    .left h1{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1.15;margin-bottom:24px;}
+    .left .base-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:0;}
+    .left .base-list li{display:flex;align-items:center;gap:10px;font-size:14px;color:#444;}
+    .left .base-list li::before{content:"✓";color:#22C55E;font-weight:700;font-size:13px;flex-shrink:0;}
+
+    /* plan features block */
+    .plan-features{margin-top:20px;border-top:1px solid #F3F4F6;padding-top:16px;}
+    .plan-features .feat-title{font-size:14px;font-weight:700;color:#111;margin-bottom:12px;}
+    .feat-list{list-style:none;display:flex;flex-direction:column;gap:9px;}
+    .feat-list li{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:#444;line-height:1.4;}
+    .feat-list li::before{content:"✓";color:#F46036;font-weight:700;font-size:13px;flex-shrink:0;margin-top:1px;}
+    .feat-list li.negative::before{content:"x";color:#EF4444;font-weight:700;font-size:13px;flex-shrink:0;margin-top:1px;line-height:1.4;display:inline-block;width:1em;text-align:center;}
+    .feat-list li span{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+    .import-line{display:none;}
+    .tooltip-wrap{position:relative;display:inline-flex;align-items:center;cursor:default;}
+    .tooltip-icon{width:15px;height:15px;border-radius:50%;background:#E5E7EB;color:#666;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+    .tooltip-icon:hover{background:#D1D5DB;}
+    .tooltip-box{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:11px;font-weight:500;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:99;pointer-events:none;line-height:1.4;transition:opacity .15s;}
+    .tooltip-box::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#111;}
+    .tooltip-wrap:hover .tooltip-box{visibility:visible;opacity:1;}
+
+    /* tooltip handled in feat-list section above */
+
+    .right{flex:1;}
+    .toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;justify-content:flex-end;}
+    .tab-group{background:#F3F4F6;border-radius:10px;padding:3px;display:flex;gap:2px;}
+    .tab-btn{padding:7px 22px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+    .tab-btn.active{background:#111;color:#fff;}
+    .tab-btn.inactive{background:transparent;color:#666;}
+    .discount-badge{background:#ECFDF5;color:#16A34A;font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;}
+    .simular-btn-top{padding:7px 18px;background:#F46036;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+    .simular-btn-top:hover{background:#D94F2A;}
+
+    .plan-card{border:1.5px solid #E5E7EB;border-radius:14px;padding:18px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;cursor:pointer;transition:all .2s;background:#fff;}
+    .plan-card:hover{border-color:#F46036;}
+    .plan-card.active-card{border-color:#F46036;box-shadow:0 4px 20px rgba(244,96,54,.12);}
+    .radio-outer{width:20px;height:20px;border-radius:50%;border:2px solid #D1D5DB;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px;transition:all .2s;}
+    .radio-outer.checked{border-color:#F46036;background:#F46036;}
+    .radio-inner{width:8px;height:8px;border-radius:50%;background:#fff;}
+    .card-body{flex:1;}
+    .card-name{font-size:17px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;}
+    .card-desc{font-size:12px;color:#888;line-height:1.5;max-width:300px;}
+    .card-right{text-align:right;flex-shrink:0;}
+    .card-notas{font-size:13px;font-weight:700;color:#F46036;margin-bottom:4px;}
+    .card-price{font-size:26px;font-weight:800;color:#111;letter-spacing:-.5px;line-height:1;}
+    .card-price span{font-size:13px;font-weight:500;color:#888;}
+    .card-meta{font-size:11px;color:#AAA;margin-top:3px;line-height:1.5;}
+    .ativar-btn{display:inline-block;margin-top:12px;padding:9px 22px;background:#F46036;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .2s;}
+    .ativar-btn:hover{background:#D94F2A;}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;}
+    .modal-box{background:#FAFAFA;border-radius:20px;width:100%;max-width:860px;position:relative;padding-bottom:40px;}
+    .modal-close{position:absolute;top:16px;right:20px;background:#F3F4F6;border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;z-index:10;}
+    .modal-close:hover{background:#E5E7EB;}
+
+    /* SIMULATOR */
+    .sim-inner{padding:40px 32px 0;}
+    .toggle-btn{padding:8px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+    .toggle-btn.active{background:#111;color:#fff;}
+    .toggle-btn.inactive{background:transparent;color:#666;}
+    .checkbox-card{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1.5px solid #E5E7EB;border-radius:12px;cursor:pointer;transition:all .2s;background:#fff;user-select:none;}
+    .checkbox-card:hover,.checkbox-card.checked{border-color:#F46036;background:#FFF6F3;}
+    .custom-check{width:20px;height:20px;border-radius:6px;border:2px solid #D1D5DB;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;margin-top:1px;}
+    .custom-check.checked{background:#F46036;border-color:#F46036;}
+    .sell-card{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1.5px solid #E5E7EB;border-radius:12px;cursor:pointer;transition:all .2s;background:#fff;user-select:none;flex:1;min-width:130px;position:relative;}
+    .sell-card:hover,.sell-card.selected{border-color:#F46036;background:#FFF6F3;}
+    .sell-check{position:absolute;top:9px;right:9px;width:17px;height:17px;border-radius:50%;background:#F46036;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;}
+    .growth-card{display:flex;align-items:center;gap:10px;padding:12px 16px;border:1.5px solid #E5E7EB;border-radius:12px;cursor:pointer;transition:all .2s;background:#fff;user-select:none;}
+    .growth-card:hover,.growth-card.selected{border-color:#F46036;background:#FFF6F3;}
+    .sim-plan-card{border:2px solid #E5E7EB;border-radius:14px;padding:16px 18px;background:#fff;transition:all .3s;cursor:pointer;}
+    .sim-plan-card.sel{border-color:#F46036;box-shadow:0 6px 24px rgba(244,96,54,.14);transform:translateY(-1px);}
+    .sim-plan-card.faded{opacity:.5;}
+    .radio-opt{padding:8px 14px;border:1.5px solid #E5E7EB;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;background:#fff;color:#555;}
+    .radio-opt:hover,.radio-opt.selected{border-color:#F46036;background:#FFF6F3;color:#F46036;}
+    .feature-tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500;}
+    .feature-ok{background:#F0FDF4;color:#15803D;}
+    .feature-no{background:#F9FAFB;color:#9CA3AF;}
+    .insight-tag{display:inline-flex;align-items:center;gap:5px;background:#FFF6F3;color:#F46036;border:1px solid #FFD8CC;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;margin-top:8px;}
+    .sim-btn{width:100%;padding:15px;background:#F46036;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+    .sim-btn:hover{background:#D94F2A;transform:translateY(-1px);}
+    .sim-btn:disabled{background:#D1D5DB;cursor:not-allowed;transform:none;}
+    .contratar-btn-sim{display:inline-block;padding:8px 18px;background:#fff;color:#F46036;border:2px solid #fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;}
+    .contratar-mini-sim{display:inline-block;margin-top:8px;padding:7px 14px;background:#F46036;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;}
+    .reset-btn-sim{width:100%;padding:13px;background:transparent;color:#F46036;border:2px solid #F46036;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:24px;}
+    .reset-btn-sim:hover{background:#FFF6F3;}
+    .anual-tip{background:#111;border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    .switch-anual-btn{padding:9px 16px;background:#F46036;color:#fff;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    .sim-result{animation:fadeUp .35s ease forwards;}
+    .divider-sim{height:1px;background:#F3F4F6;margin:0 0 24px;}
+    @media(max-width:700px){.page{flex-direction:column;}.left{position:static;flex:none;width:100%;}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ══════════════════════════════════════
+   DATA
+══════════════════════════════════════ */
+const payLinks = {
+  mensal:{
+    basic:      "https://pay.hotmart.com/R3365539Y?off=9bp3rdbg&checkoutMode=10",
+    plus:       "https://pay.hotmart.com/R3365539Y?off=jyyosf9e&checkoutMode=10",
+    pro:        "https://pay.hotmart.com/R3365539Y?off=n6w0kv5e&checkoutMode=10",
+    business:   "https://pay.hotmart.com/R3365539Y?off=olx92ksc&checkoutMode=10",
+    enterprise: "https://pay.hotmart.com/R3365539Y?off=aikqamox&checkoutMode=10",
+  },
+  anual:{
+    basic:      "https://pay.hotmart.com/R3365539Y?off=0krh3yli&checkoutMode=10",
+    plus:       "https://pay.hotmart.com/R3365539Y?off=po8bmb7o&checkoutMode=10",
+    pro:        "https://pay.hotmart.com/R3365539Y?off=7dxcml5e&checkoutMode=10",
+    business:   "https://pay.hotmart.com/R3365539Y?off=mdly6mhl&checkoutMode=10",
+    enterprise: "https://pay.hotmart.com/R3365539Y?off=titswpdb&checkoutMode=10",
+  },
+};
+
+// features: array of {text, tooltip} — tooltip shown as (?) if set
+const planFeatures = {
+  mensal:{
+    basic:      { features:[{text:"Não contempla importação de vendas antigas",negative:true},{text:"Não contempla função de Split de notas (NFe/NFSe)",negative:true}] },
+    plus:       { features:[{text:"Função de Split de notas (NFe/NFSe)"},{text:"Importação de até 300 vendas antigas",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    pro:        { features:[{text:"Função de Split de notas (NFe/NFSe)"},{text:"Importação de até 500 vendas antigas",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    business:   { features:[{text:"Relatórios de vendas e notas emitidas (Sob demanda)"},{text:"Função de Split de notas (NFe/NFSe)"},{text:"Sem travas por volume de faturamento"},{text:"Integração API própria"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    enterprise: { features:[{text:"Relatórios de vendas e notas emitidas (Sob demanda)"},{text:"Função de Split de notas (NFe/NFSe)"},{text:"Sem travas por volume de faturamento"},{text:"Integração API própria"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+  },
+  anual:{
+    basic:      { features:[{text:"Não contempla importação de vendas antigas",negative:true},{text:"Não contempla função de Split de notas (NFe/NFSe)",negative:true}] },
+    plus:       { features:[{text:"Função de Split de notas (NFe/NFSe)"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    pro:        { features:[{text:"Função de Split de notas (NFe/NFSe)"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    business:   { features:[{text:"Relatórios de vendas e notas emitidas (Sob demanda)"},{text:"Função de Split de notas (NFe/NFSe)"},{text:"Sem travas por volume de faturamento"},{text:"Integração API própria"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+    enterprise: { features:[{text:"Relatórios de vendas e notas emitidas (Sob demanda)"},{text:"Função de Split de notas (NFe/NFSe)"},{text:"Sem travas por volume de faturamento"},{text:"Integração API própria"},{text:"Importação de vendas antigas ilimitada",tooltip:"Irá subtrair na franquia de notas contratada"}] },
+  },
+};
+
+const plans = {
+  mensal:[
+    {id:"basic",      name:"Basic",      notas:"60 notas/mês",     notasN:60,    notaExtra:0.77,preco:137,  adesao:179, importacaoVendas:0,       split:false,api:false,desc:"Ideal para quem está começando a vender online e quer simplificar a emissão das notas fiscais."},
+    {id:"plus",       name:"Plus",       notas:"500 notas/mês",    notasN:500,   notaExtra:0.57,preco:257,  adesao:347, importacaoVendas:300,     split:true, api:false,desc:"Pensado para negócios em expansão que já lidam com um volume maior de vendas e precisam reduzir erros manuais."},
+    {id:"pro",        name:"Pro",        notas:"1.500 notas/mês",  notasN:1500,  notaExtra:0.37,preco:347,  adesao:347, importacaoVendas:500,     split:true, api:false,desc:"Feito para empresas que precisam emitir um alto volume de notas em operações mais complexas."},
+    {id:"business",   name:"Business",   notas:"5.000 notas/mês",  notasN:5000,  notaExtra:0.17,preco:737,  adesao:347, importacaoVendas:Infinity,split:true, api:true, desc:"Feito para empresas que precisam emitir um alto volume de notas em operações mais complexas."},
+    {id:"enterprise", name:"Enterprise", notas:"10.000 notas/mês", notasN:10000, notaExtra:0.09,preco:1147, adesao:347, importacaoVendas:Infinity,split:true, api:true, desc:"Voltado para operações robustas, que demandam alto volume de emissão de notas, possuem times dedicados, múltiplos produtos e coproduções."},
+  ],
+  anual:[
+    {id:"basic",      name:"Basic",      notas:"720 notas/ano",     notasN:720,   notaExtra:0.77,preco:1227, adesao:179, importacaoVendas:0,       split:false,api:false,desc:"Ideal para quem está começando a vender online e quer simplificar a emissão das notas fiscais."},
+    {id:"plus",       name:"Plus",       notas:"6.000 notas/ano",   notasN:6000,  notaExtra:0.47,preco:2297, adesao:347, importacaoVendas:Infinity,split:true, api:false,desc:"Pensado para negócios em expansão que já lidam com um volume maior de vendas e precisam reduzir erros manuais."},
+    {id:"pro",        name:"Pro",        notas:"18.000 notas/ano",  notasN:18000, notaExtra:0.27,preco:3119, adesao:347, importacaoVendas:Infinity,split:true, api:false,desc:"Feito para empresas que precisam emitir um alto volume de notas em operações mais complexas."},
+    {id:"business",   name:"Business",   notas:"60.000 notas/ano",  notasN:60000, notaExtra:0.17,preco:6633, adesao:347, importacaoVendas:Infinity,split:true, api:true, desc:"Feito para empresas que precisam emitir um alto volume de notas em operações mais complexas."},
+    {id:"enterprise", name:"Enterprise", notas:"120.000 notas/ano", notasN:120000,notaExtra:0.09,preco:11400,adesao:347, importacaoVendas:Infinity,split:true, api:true, desc:"Voltado para operações robustas, que demandam alto volume de emissão de notas, possuem times dedicados, múltiplos produtos e coproduções."},
+  ],
+};
+
+const SELL_OPTIONS=[
+  {value:"digital",label:"Produto digital",example:"Ex: E-book, Presets, Audiolivros"},
+  {value:"fisico", label:"Produto físico (Hotmart)", example:"Ex: Livros, Suplementos, Itens Educacionais"},
+  {value:"servico",label:"Serviço",         example:"Ex: Videoaulas, Mentorias, Cursos Online"},
+];
+
+const fmt = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+function getRecommendedPlan(per,notasMensal,needSplit,needApi,needImport,importQty,crescimento){
+  const lista   = plans[per];
+  const notasRef= per==="anual" ? notasMensal*12 : notasMensal;
+  const highImp = needImport&&(importQty==="mais500"||importQty==="ilimitada");
+  const realImp = needImport&&importQty!=="nao";
+  let idx = lista.findIndex(p=>{
+    const sOk=!needSplit||p.split;
+    const aOk=!needApi||p.api;
+    const iOk=!realImp||(highImp?p.importacaoVendas===Infinity:p.importacaoVendas>=(importQty==="300"?300:500));
+    return sOk&&aOk&&iOk&&p.notasN>=notasRef;
+  });
+  if(idx===-1)idx=lista.length-1;
+  if(crescimento==="acelerado"&&idx<lista.length-1)idx+=1;
+  return lista[idx];
+}
+
+/* Tooltip component */
+function Tooltip({text}){
+  return(
+    <span className="tooltip-wrap">
+      <span className="tooltip-icon">?</span>
+      <span className="tooltip-box">{text}</span>
+    </span>
+  );
+}
+
+/* ══════════════════════════════════════
+   PRICING PAGE
+══════════════════════════════════════ */
+
+    // ─── QUALIFICATION MODAL ───────────────────────────────────────────────
+    function QualificacaoModal({ checkoutUrl, planName, onClose, onOpenSimulator }) {
+      const [step, setStep]         = useState(0);  // 0=simulate?, 1,2,3 | 'approved'|'bloqueado'|'semPlat'|'semCnpj'
+      const [q1, setQ1]             = useState(null);
+      const [q2, setQ2]             = useState(null);
+      const [cnpj, setCnpj]         = useState('');
+      const [semCnpj, setSemCnpj]   = useState(false);
+      const [cnpjErro, setCnpjErro] = useState('');
+
+      function fmtCnpj(v) {
+        v = v.replace(/\D/g,'').slice(0,14);
+        if (v.length > 12) return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');
+        if (v.length > 8)  return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');
+        if (v.length > 5)  return v.replace(/^(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');
+        if (v.length > 2)  return v.replace(/^(\d{2})(\d{1,3})/,'$1.$2');
+        return v;
+      }
+
+      function validarCnpj(c) {
+        const d = c.replace(/\D/g,'');
+        if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+        let t = d.length-2, n = d.substring(0,t), g = d.substring(t), s = 0, p = t-7;
+        for (let i=t; i>=1; i--) { s += parseInt(n.charAt(t-i))*p--; if(p<2) p=9; }
+        let r = s%11<2?0:11-s%11;
+        if (r != parseInt(g.charAt(0))) return false;
+        t++; n=d.substring(0,t); s=0; p=t-7;
+        for (let i=t; i>=1; i--) { s += parseInt(n.charAt(t-i))*p--; if(p<2) p=9; }
+        r = s%11<2?0:11-s%11;
+        return r == parseInt(g.charAt(1));
+      }
+
+      const progStyle = (n) => ({
+        width: 28, height: 8, borderRadius: 4,
+        background: (typeof step === 'number' ? step >= n : true) ? '#F46036' : '#E5E7EB',
+        transition: 'background .2s'
+      });
+
+      const optStyle = (sel) => ({
+        display:'flex', alignItems:'center', gap:12, padding:'14px 18px',
+        border: sel ? '2px solid #F46036' : '1.5px solid #E5E7EB',
+        borderRadius:12, cursor:'pointer', background: sel ? '#FFF6F3' : '#fff',
+        marginBottom:10, transition:'all .15s', userSelect:'none'
+      });
+
+      const radioStyle = (sel) => ({
+        width:18, height:18, borderRadius:'50%', flexShrink:0,
+        border: sel ? '5px solid #F46036' : '2px solid #D1D5DB',
+        background:'#fff', transition:'border .15s'
+      });
+
+      return (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}
+          onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+          <div style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,.2)',position:'relative'}}>
+
+            {/* Close button */}
+            <button onClick={onClose} style={{position:'absolute',top:16,right:16,background:'none',border:'none',fontSize:22,cursor:'pointer',color:'#aaa',lineHeight:1,zIndex:10}}>×</button>
+
+            {/* Intro header — só aparece nas etapas de qualificação */}
+            {typeof step === 'number' && step >= 1 && (
+              <div style={{textAlign:'center',padding:'28px 24px 0 24px'}}>
+                <h2 style={{fontSize:20,fontWeight:800,color:'#111',lineHeight:1.3,marginBottom:8}}>Antes de começar, queremos te conhecer melhor 😊</h2>
+                <p style={{fontSize:13,color:'#888',lineHeight:1.5}}>Responda algumas perguntas rápidas para garantir que o eNotas é a solução ideal pra você.</p>
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {typeof step === 'number' && step > 0 && (
+              <div style={{display:'flex',gap:6,padding:'16px 24px 0'}}>
+                {[1,2,3].map(n=><div key={n} style={progStyle(n)}/>)}
+              </div>
+            )}
+
+            <div style={{padding:'24px 24px 28px'}}>
+
+              {/* Etapa 0 — Confirmar plano */}
+              {step === 0 && (
+                <div style={{paddingTop:8}}>
+                  <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:'#111',lineHeight:1.3}}>
+                    Boa escolha! Antes de ativar o plano {planName}, quer ter certeza que ele é o ideal para você?
+                  </h2>
+                  <p style={{fontSize:13,color:'#888',marginTop:6,marginBottom:20,lineHeight:1.5}}>
+                    Se já sabe o que precisa, é só continuar. O Plano Ideal ajuda quem ainda tem dúvida sobre o volume de notas.
+                  </p>
+                  <div style={{display:'flex',gap:12,marginTop:4}}>
+                    <button
+                      onClick={()=>setStep(1)}
+                      style={{flex:2,padding:'14px 12px',background:'#F46036',color:'#fff',border:'none',borderRadius:12,fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',lineHeight:1.3}}>
+                      Continuar com o plano {planName}
+                    </button>
+                    <button
+                      onClick={()=>{onClose(); onOpenSimulator && onOpenSimulator();}}
+                      style={{flex:1,padding:'14px 12px',background:'#fff',color:'#555',border:'1.5px solid #E5E7EB',borderRadius:12,fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
+                      Plano Ideal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 1 */}
+              {step === 1 && (
+                <div>
+                  <h2 style={{fontSize:18,fontWeight:700,marginBottom:6,color:'#111',lineHeight:1.3}}>Para qual tipo de produto você precisa emitir notas fiscais?</h2>
+                  <p style={{fontSize:13,color:'#666',marginBottom:20}}>Responda para garantir que o eNotas é ideal para você.</p>
+                  {[
+                    {v:'digitais',l:'Produtos digitais (e-book, mentorias e comunidade)'},
+                    {v:'fisicos-hotmart',l:'Produtos físicos pela Hotmart'},
+                    {v:'outros',l:'Outros — nenhuma das opções acima'},
+                  ].map(o=>(
+                    <div key={o.v} style={optStyle(q1===o.v)} onClick={()=>setQ1(o.v)}>
+                      <div style={radioStyle(q1===o.v)}/>
+                      <span style={{fontSize:14,color:'#333'}}>{o.l}</span>
+                    </div>
+                  ))}
+                  <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}>
+                    <button disabled={!q1} onClick={()=>{ if(q1==='outros') setStep('bloqueado'); else setStep(2); }}
+                      style={{background:q1?'#F46036':'#E5E7EB',color:q1?'#fff':'#aaa',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:700,fontSize:14,cursor:q1?'pointer':'not-allowed',fontFamily:'inherit',transition:'background .2s'}}>
+                      Continuar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 2 */}
+              {step === 2 && (
+                <div>
+                  <h2 style={{fontSize:18,fontWeight:700,marginBottom:6,color:'#111',lineHeight:1.3}}>Em qual plataforma você vende?</h2>
+                  <p style={{fontSize:13,color:'#666',marginBottom:20}}>Isso ajuda a garantir a compatibilidade da integração.</p>
+                  {[
+                    {v:'hotmart',l:'Hotmart'},
+                    {v:'outra',l:'Outra plataforma'},
+                    {v:'nenhuma',l:'Não vendo em nenhuma plataforma digital'},
+                  ].map(o=>(
+                    <div key={o.v} style={optStyle(q2===o.v)} onClick={()=>setQ2(o.v)}>
+                      <div style={radioStyle(q2===o.v)}/>
+                      <span style={{fontSize:14,color:'#333'}}>{o.l}</span>
+                    </div>
+                  ))}
+                  <div style={{display:'flex',justifyContent:'space-between',marginTop:8}}>
+                    <button onClick={()=>setStep(1)} style={{background:'none',border:'1.5px solid #E5E7EB',borderRadius:10,padding:'12px 20px',fontWeight:600,fontSize:14,cursor:'pointer',color:'#555',fontFamily:'inherit'}}>Voltar</button>
+                    <button disabled={!q2} onClick={()=>{ if(q2==='nenhuma') setStep('semPlat'); else setStep(3); }}
+                      style={{background:q2?'#F46036':'#E5E7EB',color:q2?'#fff':'#aaa',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:700,fontSize:14,cursor:q2?'pointer':'not-allowed',fontFamily:'inherit',transition:'background .2s'}}>
+                      Continuar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 3 — CNPJ */}
+              {step === 3 && (
+                <div>
+                  <h2 style={{fontSize:18,fontWeight:700,marginBottom:6,color:'#111',lineHeight:1.3}}>Qual o CNPJ da sua empresa?</h2>
+                  <p style={{fontSize:13,color:'#666',marginBottom:16}}>Precisamos do CNPJ para verificar a compatibilidade.</p>
+                  <input
+                    type="text" inputMode="numeric" placeholder="00.000.000/0000-00" maxLength={18}
+                    value={cnpj}
+                    onChange={e=>{ const v=fmtCnpj(e.target.value); setCnpj(v); setSemCnpj(false); setCnpjErro(''); }}
+                    style={{width:'100%',padding:'13px 16px',border:cnpjErro?'2px solid #EF4444':'1.5px solid #E5E7EB',borderRadius:11,fontSize:15,fontFamily:'inherit',outline:'none',marginBottom:6}}
+                  />
+                  {cnpjErro && <p style={{color:'#EF4444',fontSize:12,marginBottom:8}}>{cnpjErro}</p>}
+                  <p style={{fontSize:12,color:'#888',marginBottom:14}}>O eNotas funciona apenas para Pessoa Jurídica (PJ) com domicílio fiscal no Brasil.</p>
+                  <div style={optStyle(semCnpj)} onClick={()=>{ setSemCnpj(!semCnpj); setCnpj(''); setCnpjErro(''); }}>
+                    <div style={radioStyle(semCnpj)}/>
+                    <span style={{fontSize:14,color:'#333'}}>Ainda não tenho CNPJ, estou abrindo</span>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',marginTop:8}}>
+                    <button onClick={()=>setStep(2)} style={{background:'none',border:'1.5px solid #E5E7EB',borderRadius:10,padding:'12px 20px',fontWeight:600,fontSize:14,cursor:'pointer',color:'#555',fontFamily:'inherit'}}>Voltar</button>
+                    <button
+                      disabled={!semCnpj && cnpj.replace(/\D/g,'').length < 14}
+                      onClick={()=>{
+                        if (semCnpj) { setStep('semCnpj'); return; }
+                        const raw = cnpj.replace(/\D/g,'');
+                        if (!validarCnpj(raw)) { setCnpjErro('CNPJ inválido. Verifique o número e tente novamente.'); return; }
+                        setStep('approved');
+                      }}
+                      style={{background:(!semCnpj&&cnpj.replace(/\D/g,'').length<14)?'#E5E7EB':'#F46036',color:(!semCnpj&&cnpj.replace(/\D/g,'').length<14)?'#aaa':'#fff',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit',transition:'background .2s'}}>
+                      Verificar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Aprovado */}
+              {step === 'approved' && (
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:48,marginBottom:12}}>&#10003;</div>
+                  <h2 style={{fontSize:20,fontWeight:700,color:'#111',marginBottom:8}}>Tudo certo! O eNotas é pra você.</h2>
+                  <p style={{fontSize:14,color:'#555',marginBottom:20}}>Antes de ir para o checkout, atenção a esses pontos importantes:</p>
+                  <div style={{background:'#FFF6F3',border:'1.5px solid #FFD8CC',borderRadius:12,padding:'16px 20px',textAlign:'left',marginBottom:24}}>
+                    <div style={{fontWeight:700,fontSize:13,color:'#F46036',marginBottom:10}}>&#9888; Atenção ao preencher o checkout</div>
+                    <ul style={{paddingLeft:18,display:'flex',flexDirection:'column',gap:8}}>
+                      <li style={{fontSize:13,color:'#444',lineHeight:1.5}}>Se é cliente Hotmart, use o <strong>mesmo e-mail</strong> da sua conta para realizar a compra.</li>
+                      <li style={{fontSize:13,color:'#444',lineHeight:1.5}}>Preencha os dados de cobrança com as <strong>informações que devem constar na nota fiscal</strong> (razão social, CNPJ e endereço da empresa).</li>
+                      <li style={{fontSize:13,color:'#444',lineHeight:1.5}}>Os dados informados no checkout serão utilizados para <strong>emitir a nota fiscal da sua assinatura</strong>. Confira tudo antes de finalizar.</li>
+                    </ul>
+                  </div>
+                  <a href={checkoutUrl} target="_blank" rel="noopener noreferrer"
+                    style={{display:'inline-block',background:'#F46036',color:'#fff',textDecoration:'none',padding:'14px 36px',borderRadius:12,fontWeight:700,fontSize:15,boxShadow:'0 4px 16px rgba(244,96,54,.35)'}}>
+                    Ir para o checkout →
+                  </a>
+                </div>
+              )}
+
+              {/* Perfil incompatível */}
+              {step === 'bloqueado' && (
+                <div style={{textAlign:'center',padding:'8px 0'}}>
+                  <div style={{fontSize:48,marginBottom:12}}>&#x1F615;</div>
+                  <h2 style={{fontSize:20,fontWeight:700,color:'#111',marginBottom:10}}>O eNotas pode não ser ideal pra você</h2>
+                  <p style={{fontSize:14,color:'#555',marginBottom:24}}>O eNotas é focado em infoprodutores que vendem produtos digitais em plataformas como Hotmart, Eduzz, Kiwify e outras.</p>
+                  <button onClick={onClose} style={{background:'#F3F4F6',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:600,fontSize:14,cursor:'pointer',fontFamily:'inherit',color:'#555'}}>Voltar ao site</button>
+                </div>
+              )}
+
+              {/* Sem plataforma */}
+              {step === 'semPlat' && (
+                <div style={{textAlign:'center',padding:'8px 0'}}>
+                  <div style={{fontSize:48,marginBottom:12}}>&#x1F914;</div>
+                  <h2 style={{fontSize:20,fontWeight:700,color:'#111',marginBottom:10}}>Você ainda não vende em uma plataforma digital</h2>
+                  <p style={{fontSize:14,color:'#555',marginBottom:24}}>O eNotas funciona integrado a plataformas de venda de produtos digitais. Quando você começar a vender em uma delas, volte aqui!</p>
+                  <button onClick={onClose} style={{background:'#F3F4F6',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:600,fontSize:14,cursor:'pointer',fontFamily:'inherit',color:'#555'}}>Voltar ao site</button>
+                </div>
+              )}
+
+              {/* Sem CNPJ */}
+              {step === 'semCnpj' && (
+                <div style={{textAlign:'center',padding:'8px 0'}}>
+                  <div style={{fontSize:48,marginBottom:12}}>&#x1F4CB;</div>
+                  <h2 style={{fontSize:20,fontWeight:700,color:'#111',marginBottom:10}}>Você vai precisar de um CNPJ</h2>
+                  <p style={{fontSize:14,color:'#555',marginBottom:24}}>O eNotas emite notas fiscais para Pessoa Jurídica (PJ). Assim que abrir seu CNPJ, volte aqui e comece a emitir suas notas automaticamente.</p>
+                  <button onClick={onClose} style={{background:'#F3F4F6',border:'none',borderRadius:10,padding:'12px 28px',fontWeight:600,fontSize:14,cursor:'pointer',fontFamily:'inherit',color:'#555'}}>Voltar ao site</button>
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // ─── END QUALIFICATION MODAL ───────────────────────────────────────────
+function PricingPage({onSimular}){
+  const [per, setPer]       = useState("mensal");
+  const [selected, setSel]  = useState("basic");
+  const [pricingQual, setPricingQual] = useState({open:false, url:"", planName:""});
+  const list = plans[per];
+  const feat = planFeatures[per][selected];
+
+  return(
+    <>
+    <div className="page">
+      {/* LEFT */}
+      <div className="left">
+        <p className="eyebrow">Escolha seu plano e comece agora</p>
+        <h1>Junte-se a quem mais faz acontecer no Brasil!</h1>
+        <ul className="base-list">
+          <li>Emissão automática</li>
+          <li>Suporte especialista em negócio online</li>
+          <li>Relatórios de vendas e notas emitidas</li>
+        </ul>
+
+        {feat.features.length > 0 && (
+          <div className="plan-features">
+            <div className="feat-title">{list.find(p=>p.id===selected)?.name}</div>
+            <ul className="feat-list">
+              {feat.features.map((f,i)=>(
+                <li key={i} className={f.negative?"negative":""}>
+                  <span>{f.text}</span>
+                  {f.tooltip && <Tooltip text={f.tooltip}/>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT */}
+      <div className="right">
+        <div className="toggle-row">
+          <div className="tab-group">
+            <button className={`tab-btn ${per==="mensal"?"active":"inactive"}`} onClick={()=>{setPer("mensal");setSel("basic");}}>Mensal</button>
+            <button className={`tab-btn ${per==="anual" ?"active":"inactive"}`} onClick={()=>{setPer("anual");setSel("basic");}}>Anual</button>
+          </div>
+          {per==="anual"&&<span className="discount-badge">25% de desconto</span>}
+          <button className="simular-btn-top" onClick={onSimular}>Plano Ideal</button>
+        </div>
+
+        {list.map(plan=>{
+          const isSel = selected===plan.id;
+          return(
+            <div key={plan.id} className={`plan-card ${isSel?"active-card":""}`} onClick={()=>setSel(plan.id)}>
+              <div className={`radio-outer ${isSel?"checked":""}`}>
+                {isSel&&<div className="radio-inner"/>}
+              </div>
+              <div className="card-body">
+                <div className="card-name">{plan.name}</div>
+                <div className="card-desc">{plan.desc}</div>
+                {isSel&&(
+                  <button onClick={()=>setPricingQual({open:true,url:payLinks[per][plan.id],planName:plan.name})} className="ativar-btn" style={{cursor:"pointer",border:"none"}}>
+                    Ativar agora →
+                  </button>
+                )}
+              </div>
+              <div className="card-right">
+                <div className="card-notas">{plan.notas}</div>
+                <div className="card-price">{fmt(plan.preco)}<span>/{per==="anual"?"ano":"mês"}</span></div>
+                <div className="card-meta">+{fmt(plan.notaExtra)} por nota adicional<br/></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+    {pricingQual.open&&<QualificacaoModal checkoutUrl={pricingQual.url} planName={pricingQual.planName} onClose={()=>setPricingQual({open:false,url:"",planName:""})} onOpenSimulator={onSimular}/>}
+    </>
+  );
+}
+
+/* ══════════════════════════════════════
+   SIMULATOR
+══════════════════════════════════════ */
+function Simulator(){
+  const [per,setPer]=useState("anual");
+  const [notasMes,setNotasMes]=useState("");
+  const [tiposVenda,setTiposVenda]=useState([]);
+  const [crescimento,setCrescimento]=useState(null);
+  const [needSplit,setNeedSplit]=useState(false);
+  const [needApi,setNeedApi]=useState(false);
+  const [needImport,setNeedImport]=useState(false);
+  const [importQty,setImportQty]=useState("nao");
+  const [showResult,setShowResult]=useState(false);
+  const [selId,setSelId]=useState(null);
+  const [showAnualBanner,setShowAnualBanner]=useState(false);
+  const [showMensalBanner,setShowMensalBanner]=useState(false);
+  const [bannerDismissed,setBannerDismissed]=useState(false);
+  const [showComp,setShowComp]=useState(false);
+  const timerRef=useRef(null);
+
+  const notas=parseInt(notasMes)||0;
+  const canSim=notas>0&&tiposVenda.length>0&&crescimento;
+  const highImp=needImport&&(importQty==="mais500"||importQty==="ilimitada");
+  const splitDisabled=tiposVenda.length>0&&!(tiposVenda.includes("digital")&&tiposVenda.includes("servico"));
+  const toggleVenda=v=>setTiposVenda(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v]);
+
+  const rec=showResult?getRecommendedPlan(per,notas,needSplit,needApi,needImport,importQty,crescimento):null;
+  const recAnual=showResult&&per==="mensal"?getRecommendedPlan("anual",notas,needSplit,needApi,needImport,importQty,crescimento):null;
+  const disp=showResult?(plans[per].find(p=>p.id===selId)||rec):null;
+
+  useEffect(()=>{
+    clearTimeout(timerRef.current);
+    if(showResult&&per==="mensal"&&!bannerDismissed&&!highImp)
+      setShowMensalBanner(true);
+    return()=>clearTimeout(timerRef.current);
+  },[showResult,per,bannerDismissed,highImp]);
+
+  const handleSimular=()=>{
+    if(!canSim)return;
+    setPer("anual");
+    const r=getRecommendedPlan("anual",notas,needSplit,needApi,needImport,importQty,crescimento);
+    setSelId(r.id);setShowResult(true);
+    setShowAnualBanner(true);setShowMensalBanner(false);setBannerDismissed(false);
+  };
+  const switchTab=p=>{
+    setPer(p);setShowAnualBanner(false);
+    if(showResult){const r=getRecommendedPlan(p,notas,needSplit,needApi,needImport,importQty,crescimento);setSelId(r.id);}
+  };
+  const reset=()=>{
+    setShowResult(false);setShowAnualBanner(false);setShowMensalBanner(false);setBannerDismissed(false);
+    setNotasMes("");setTiposVenda([]);setCrescimento(null);
+    setNeedSplit(false);setNeedApi(false);setNeedImport(false);setImportQty("nao");setSelId(null);
+    setPer("anual");setShowComp(false);
+    clearTimeout(timerRef.current);
+  };
+
+  const GRow=({value,label,desc})=>(
+    <div className={`growth-card ${crescimento===value?"selected":""}`} onClick={()=>setCrescimento(value)}>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:600,fontSize:14,color:crescimento===value?"#F46036":"#333"}}>{label}</div>
+        <div style={{fontSize:12,color:"#888",marginTop:1}}>{desc}</div>
+      </div>
+      {crescimento===value&&<span style={{color:"#F46036",fontWeight:700}}>&#10003;</span>}
+    </div>
+  );
+
+  return(
+    <>
+    <div className="sim-inner">
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{display:"inline-block",background:"#FFF6F3",color:"#F46036",fontSize:11,fontWeight:700,padding:"5px 14px",borderRadius:20,marginBottom:12,letterSpacing:1,textTransform:"uppercase"}}></div>
+        <h2 style={{fontSize:"clamp(24px,4vw,36px)",fontWeight:800,letterSpacing:"-1px",lineHeight:1.15,marginBottom:10}}>Encontre o plano ideal<br/><span style={{color:"#F46036"}}>para a sua empresa.</span></h2>
+        <p style={{color:"#666",fontSize:14,maxWidth:400,margin:"0 auto"}}>Responda algumas perguntas e descubra qual plano se encaixa melhor com o seu negócio.</p>
+        <p style={{color:"#888",fontSize:12,maxWidth:460,margin:"16px auto 0",textAlign:"center"}}>O eNotas funciona apenas para Pessoa Jurídica (PJ) com domicílio fiscal no Brasil.</p>
+      </div>
+
+      {/* Toggle — apenas no resultado */}
+      {showResult&&(
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:8,marginBottom:24}}>
+          <div style={{background:"#F3F4F6",borderRadius:11,padding:3,display:"flex",gap:3}}>
+            <button className={`toggle-btn ${per==="mensal"?"active":"inactive"}`} onClick={()=>switchTab("mensal")}>Mensal</button>
+            <button className={`toggle-btn ${per==="anual" ?"active":"inactive"}`} onClick={()=>switchTab("anual")}>Anual</button>
+          </div>
+          {per==="anual"&&<div style={{background:"#ECFDF5",color:"#16A34A",fontSize:12,fontWeight:700,padding:"5px 11px",borderRadius:20}}>25% de desconto</div>}
+        </div>
+      )}
+
+      {/* Banner anual — aparece ao simular */}
+      {showResult&&per==="anual"&&(
+        <div style={{marginBottom:20,background:"linear-gradient(135deg,#F46036,#D94F2A)",borderRadius:14,padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap",boxShadow:"0 8px 32px rgba(244,96,54,.3)"}}>
+          <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+            <div style={{background:"rgba(0,0,0,.2)",borderRadius:9,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"#fff",fontWeight:800,fontSize:14}}>%</div>
+            <div>
+              <p style={{color:"#fff",fontWeight:700,fontSize:13,marginBottom:3}}>Você está no plano anual com 25% de desconto!</p>
+              <p style={{color:"rgba(255,255,255,.8)",fontSize:12,lineHeight:1.5}}>No plano anual você economiza 25% em relação ao mensal.</p>
+            </div>
+          </div>
+          <button style={{padding:"8px 16px",background:"#111",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>switchTab("mensal")}>Ver plano mensal</button>
+        </div>
+      )}
+
+      {/* Banner mensal — aparece 5s após migrar */}
+      {showMensalBanner&&per==="mensal"&&(
+        <div style={{marginBottom:20,background:"linear-gradient(135deg,#111,#222)",borderRadius:14,padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+            <div style={{background:"#F46036",borderRadius:9,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"#fff",fontWeight:800,fontSize:14}}>%</div>
+            <div>
+              <p style={{color:"#fff",fontWeight:700,fontSize:13,marginBottom:3}}>Economize 25% escolhendo o plano anual!</p>
+              <p style={{color:"#AAA",fontSize:12,lineHeight:1.5}}>Se optar pelo plano anual, você irá economizar 25% no valor total a ser pago.</p>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,flexShrink:0}}>
+            <button style={{padding:"8px 16px",background:"#F46036",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>switchTab("anual")}>Ver plano anual</button>
+            
+          </div>
+        </div>
+      )}
+
+      {!showResult?(
+        <div style={{background:"#fff",border:"1.5px solid #E5E7EB",borderRadius:18,padding:"28px",boxShadow:"0 4px 20px rgba(0,0,0,.04)"}}>
+          <div style={{marginBottom:24}}>
+            <label style={{display:"block",fontWeight:700,fontSize:14,marginBottom:5}}>Quantas notas fiscais você emite por mês?</label>
+            <p style={{color:"#888",fontSize:12,marginBottom:10}}>Estime sua média mensal de notas emitidas.</p>
+            <input type="number" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E7EB",borderRadius:11,fontSize:15,fontFamily:"'DM Sans',sans-serif",color:"#111",outline:"none"}} placeholder="Ex: 150" value={notasMes} min={1} onChange={e=>setNotasMes(e.target.value)}/>
+          </div>
+          <div className="divider-sim"/>
+          <div style={{marginBottom:24}}>
+            <label style={{display:"block",fontWeight:700,fontSize:14,marginBottom:5}}>Qual tipo de infoproduto você vende?</label>
+            <p style={{color:"#888",fontSize:12,marginBottom:12}}>Pode selecionar mais de uma opção.</p>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {SELL_OPTIONS.map(opt=>{const sel=tiposVenda.includes(opt.value);return(
+                <div key={opt.value} className={`sell-card ${sel?"selected":""}`} onClick={()=>toggleVenda(opt.value)}>
+                  {sel&&<span className="sell-check">&#10003;</span>}
+                  <span style={{fontSize:13,fontWeight:700,color:sel?"#F46036":"#333"}}>{opt.label}</span>
+                  <span style={{fontSize:11,color:"#999"}}>{opt.example}</span>
+                </div>
+              );})}
+            </div>
+          </div>
+          <div className="divider-sim"/>
+          <div style={{marginBottom:24}}>
+            <label style={{display:"block",fontWeight:700,fontSize:14,marginBottom:5}}>Como está o crescimento do seu negócio?</label>
+            <p style={{color:"#888",fontSize:12,marginBottom:12}}>Isso nos ajuda a garantir que o plano vai acompanhar você.</p>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              <GRow value="estavel"   label="Estável"               desc="Volume de vendas previsível e constante."/>
+              <GRow value="moderado"  label="Crescimento moderado"  desc="Crescendo devagar, mas de forma consistente."/>
+              <GRow value="acelerado" label="Crescimento acelerado" desc="Expansão rápida — o volume de notas deve aumentar em breve."/>
+            </div>
+            {crescimento==="acelerado"&&<div className="insight-tag">Recomendamos um plano com folga para você não precisar migrar em pouco tempo</div>}
+          </div>
+          <div className="divider-sim"/>
+          <div style={{marginBottom:24}}>
+            <label style={{display:"block",fontWeight:700,fontSize:14,marginBottom:5}}>Alguma funcionalidade adicional?</label>
+            <p style={{color:"#888",fontSize:12,marginBottom:12}}>Opcional — marque se precisar.</p>
+            <div style={{display:"flex",flexDirection:"column",gap:9}}>
+              {(()=>{
+                const splitDisabled = tiposVenda.length > 0 && !(tiposVenda.includes("digital") && tiposVenda.includes("servico"));
+                return (
+                  <>
+                    <div
+                      className={`checkbox-card ${needSplit && !splitDisabled ? "checked" : ""}`}
+                      style={splitDisabled ? {opacity:.45, cursor:"not-allowed", pointerEvents:"none"} : {}}
+                      onClick={()=>{ if(!splitDisabled) setNeedSplit(!needSplit); }}
+                    >
+                      <div className={`custom-check ${needSplit && !splitDisabled ? "checked" : ""}`}>
+                        {needSplit && !splitDisabled && <span style={{color:"#fff",fontSize:11}}>&#10003;</span>}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:13}}>Split de Notas (NFe / NFSe)</div>
+                        <div style={{color:"#888",fontSize:12,marginTop:1}}>Divisão de um mesmo pagamento em uma nota de serviço e uma nota de produto.</div>
+                      </div>
+                    </div>
+                    {splitDisabled && (
+                      <div style={{background:"#FFF6F3",border:"1px solid #FFD8CC",borderRadius:10,padding:"9px 14px",fontSize:12,color:"#666",marginTop:-4,lineHeight:1.5}}>
+                        Para emissões de produto físico, a nota deverá ser emitida como NF-e.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+              <div className={`checkbox-card ${needImport?"checked":""}`} onClick={()=>setNeedImport(!needImport)}>
+                <div className={`custom-check ${needImport?"checked":""}`}>{needImport&&<span style={{color:"#fff",fontSize:11}}>&#10003;</span>}</div>
+                <div><div style={{fontWeight:600,fontSize:13}}>Importação de vendas antigas</div><div style={{color:"#888",fontSize:12,marginTop:1}}>Importe histórico de vendas para emissão retroativa de notas.</div></div>
+              </div>
+              {needImport&&(
+                <div style={{background:"#FFF6F3",borderRadius:11,padding:"13px 15px",border:"1px solid #FFD8CC",marginTop:-4}}>
+                  <label style={{display:"block",fontWeight:600,fontSize:12,marginBottom:9,color:"#555"}}>Quantas vendas antigas você precisa importar?</label>
+                  <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                    {[{value:"nao",label:"Não vou importar"},{value:"300",label:"Até 300"},{value:"500",label:"Até 500"},{value:"mais500",label:"Mais de 500"}].map(o=>(
+                      <div key={o.value} className={`radio-opt ${importQty===o.value?"selected":""}`} onClick={e=>{e.stopPropagation();setImportQty(o.value);}}>{o.label}</div>
+                    ))}
+                  </div>
+                  {highImp&&<div className="insight-tag" style={{display:"block",marginTop:10}}>Para esse volume, recomendamos a assinatura do plano anual — em certos planos ele contempla importação ilimitada de vendas antigas.</div>}
+                </div>
+              )}
+              <div className={`checkbox-card ${needApi?"checked":""}`} onClick={()=>setNeedApi(!needApi)}>
+                <div className={`custom-check ${needApi?"checked":""}`}>{needApi&&<span style={{color:"#fff",fontSize:11}}>&#10003;</span>}</div>
+                <div><div style={{fontWeight:600,fontSize:13}}>Integração com API própria</div><div style={{color:"#888",fontSize:12,marginTop:1}}>Conecte o eNotas diretamente ao seu sistema via API.</div></div>
+              </div>
+            </div>
+          </div>
+          <button className="sim-btn" onClick={handleSimular} disabled={!canSim}>Simular meu plano ideal</button>
+          {!canSim&&notasMes&&<p style={{textAlign:"center",fontSize:11,color:"#AAA",marginTop:8}}>Preencha todas as perguntas para simular</p>}
+        </div>
+      ):(
+        <div className="sim-result">
+          {per==="mensal"&&highImp&&recAnual&&(
+            <div className="anual-tip">
+              <div style={{display:"flex",gap:12,alignItems:"flex-start",flex:1}}>
+                <div style={{background:"#F46036",borderRadius:9,width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"#fff",fontWeight:800,fontSize:14}}>%</div>
+                <div>
+                  <p style={{color:"#fff",fontWeight:700,fontSize:13,marginBottom:4}}>Economize 25% com o plano anual!</p>
+                  <p style={{color:"#AAA",fontSize:12,lineHeight:1.6}}>No plano anual, o <strong style={{color:"#fff"}}>{recAnual.name}</strong> já atende seu volume de {notas} notas/mês ({(notas*12).toLocaleString("pt-BR")}/ano) com importação ilimitada — por apenas <strong style={{color:"#F46036"}}>{fmt(recAnual.preco)}/ano</strong> (~{fmt(Math.round(recAnual.preco/12))}/mês).</p>
+                </div>
+              </div>
+              <button className="switch-anual-btn" onClick={()=>switchTab("anual")}>Ver plano anual</button>
+            </div>
+          )}
+          {per==="anual"&&highImp&&(
+            <div style={{background:"#FFF6F3",border:"1px solid #FFD8CC",borderRadius:11,padding:"11px 15px",marginBottom:18,fontSize:12,color:"#555",lineHeight:1.6}}>
+              Este é o plano anual recomendado para o seu volume de importação. Caso prefira o mensal, clique em <strong>Mensal</strong> acima — mas lembre que no mensal apenas o Business e Enterprise contemplam importação acima de 500 vendas.
+            </div>
+          )}
+
+          {rec&&disp&&(()=>{
+            const payUrl=payLinks[per][disp.id];
+            const isRec=disp.id===rec.id;
+            return(
+              <div style={{background:"linear-gradient(135deg,#F46036,#FF7A55)",borderRadius:18,padding:"24px",color:"#fff",marginBottom:20,position:"relative",overflow:"hidden",boxShadow:"0 10px 36px rgba(244,96,54,.22)"}}>
+                <div style={{position:"absolute",top:-30,right:-30,width:130,height:130,borderRadius:"50%",background:"rgba(255,255,255,.08)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",bottom:-45,right:55,width:160,height:160,borderRadius:"50%",background:"rgba(255,255,255,.05)",pointerEvents:"none"}}/>
+                <div style={{fontSize:11,fontWeight:700,opacity:.8,letterSpacing:1,textTransform:"uppercase",marginBottom:7}}>{isRec?"Plano recomendado para você":`Plano selecionado  |  Recomendado: ${rec.name}`}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:14,marginBottom:18}}>
+                  <div><h3 style={{fontSize:32,fontWeight:800,letterSpacing:"-1px",marginBottom:3}}>{disp.name}</h3><p style={{opacity:.85,fontSize:13,maxWidth:300}}>{disp.desc}</p></div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:12,opacity:.8,marginBottom:1}}>{per==="anual"?"Total anual":"Por mês"}</div>
+                    <div style={{fontSize:36,fontWeight:800,letterSpacing:"-1.5px",lineHeight:1}}>{fmt(disp.preco)}</div>
+                  </div>
+                </div>
+                <div style={{background:"rgba(0,0,0,.15)",borderRadius:11,padding:"12px 14px",marginBottom:14}}>
+                  <div style={{fontSize:11,fontWeight:700,opacity:.7,letterSpacing:.5,textTransform:"uppercase",marginBottom:9}}>O que esta incluido</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>&#10003;</span><span style={{opacity:.9}}>{per==="anual"?`${disp.notasN.toLocaleString("pt-BR")} notas fiscais por ano`:`${disp.notasN.toLocaleString("pt-BR")} notas fiscais por mês`}</span></div>
+                    {disp.split&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>&#10003;</span><span style={{opacity:.9}}>Split de Notas (NFe / NFSe)</span></div>}
+                    {disp.importacaoVendas===Infinity&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>&#10003;</span><span style={{opacity:.9,display:"flex",alignItems:"center",gap:5}}>Importação de vendas antigas ilimitada<span style={{position:"relative",display:"inline-flex",alignItems:"center",cursor:"default"}} onMouseEnter={e=>e.currentTarget.querySelector(".stt").style.cssText="visibility:visible;opacity:1;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:11px;font-weight:500;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:99;pointer-events:none;line-height:1.4;"} onMouseLeave={e=>e.currentTarget.querySelector(".stt").style.cssText="visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:11px;font-weight:500;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:99;pointer-events:none;line-height:1.4;"}><span style={{width:15,height:15,borderRadius:"50%",background:"rgba(255,255,255,.25)",color:"#fff",fontSize:9,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>?</span><span className="stt" style={{visibility:"hidden",opacity:0,position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",background:"#111",color:"#fff",fontSize:11,fontWeight:500,padding:"6px 10px",borderRadius:8,whiteSpace:"nowrap",zIndex:99,pointerEvents:"none",lineHeight:1.4}}>Irá subtrair na franquia de notas contratada</span></span></span></div>}
+                    {disp.importacaoVendas===0&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.15)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>x</span><span style={{opacity:.75}}>Não contempla importação de vendas antigas</span></div>}
+                    {disp.importacaoVendas>0&&disp.importacaoVendas!==Infinity&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>&#10003;</span><span style={{opacity:.9}}>Importação de até {disp.importacaoVendas} vendas antigas</span></div>}
+                    {disp.api&&<div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>&#10003;</span><span style={{opacity:.9}}>Integração com API própria</span></div>}
+                    <div style={{height:1,background:"rgba(255,255,255,.2)",margin:"2px 0"}}/>
+                    <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12}}><span style={{background:"rgba(255,255,255,.2)",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:10,fontWeight:700}}>+</span><span style={{opacity:.75}}>{fmt(disp.notaExtra)} por nota adicional acima do limite</span></div>
+                  </div>
+                </div>
+                <div style={{display:"flex",justifyContent:"flex-end"}}>
+                  <a href={payUrl} target="_blank" rel="noopener noreferrer" className="contratar-btn-sim">Ativar agora &#8594;</a>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div style={{border:"1.5px solid #E5E7EB",borderRadius:14,overflow:"hidden",marginTop:8}}>
+            <button
+              onClick={()=>setShowComp(v=>!v)}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:showComp?"#F9FAFB":"#fff",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}
+            >
+              <span style={{fontWeight:700,fontSize:14,color:"#333"}}>Compare com todos os planos ({per})</span>
+              <span style={{display:"inline-flex",alignItems:"center",transform:showComp?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}><svg width="18" height="10" viewBox="0 0 18 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L9 9L17 1" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+            </button>
+            {showComp&&(
+              <div style={{padding:"4px 14px 14px",display:"flex",flexDirection:"column",gap:10,borderTop:"1px solid #E5E7EB"}}>
+                {plans[per].map(plan=>{
+                  const isRec=rec&&plan.id===rec.id;
+                  const isSel=plan.id===selId;
+                  const payUrl=payLinks[per][plan.id];
+                  return(
+                    <div key={plan.id} className={`sim-plan-card ${isSel?"sel":"faded"}`} onClick={()=>setSelId(plan.id)}>
+                      {(isRec||isSel)&&(
+                        <div style={{marginBottom:8,display:"flex",gap:6}}>
+                          {isRec&&<span style={{background:"#F46036",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,textTransform:"uppercase"}}>Recomendado</span>}
+                          {isSel&&!isRec&&<span style={{background:"#111",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,textTransform:"uppercase"}}>Selecionado</span>}
+                          {isSel&&isRec&&<span style={{background:"#111",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 9px",borderRadius:20,textTransform:"uppercase"}}>Selecionado</span>}
+                        </div>
+                      )}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+                        <div style={{flex:1}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                            <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.4px"}}>{plan.name}</span>
+                            <span style={{color:"#888",fontSize:11}}>{plan.notas}</span>
+                          </div>
+                          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                            {plan.split&&<span className="feature-tag feature-ok">&#10003; Split NFe/NFSe</span>}
+                            {plan.api&&<span className="feature-tag feature-ok">&#10003; API própria</span>}
+                            {plan.importacaoVendas===Infinity&&<span className="feature-tag feature-ok">&#10003; Importação ilimitada</span>}
+                            {plan.importacaoVendas>0&&plan.importacaoVendas!==Infinity&&<span className="feature-tag feature-ok">&#10003; Importação até {plan.importacaoVendas}</span>}
+                            {!plan.split&&<span className="feature-tag feature-no">x Sem split</span>}
+                            {!plan.api&&<span className="feature-tag feature-no">x Sem API</span>}
+                            {plan.importacaoVendas===0&&<span className="feature-tag feature-no">x Sem importação de vendas</span>}
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{fontSize:20,fontWeight:800,color:"#6B7280",letterSpacing:"-.4px"}}>{fmt(plan.preco)}<span style={{fontSize:11,fontWeight:500,color:"#9CA3AF"}}>/{per==="anual"?"ano":"mes"}</span></div>
+                          <div style={{fontSize:10,color:"#AAA",marginBottom:isSel?2:0}}>+{fmt(plan.notaExtra)}/nota adicional</div>
+                          {isSel&&<a href={payUrl} target="_blank" rel="noopener noreferrer" className="contratar-mini-sim" onClick={e=>e.stopPropagation()}>Ativar agora &#8594;</a>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <button className="reset-btn-sim" onClick={reset}>Refazer simulacao</button>
+        </div>
+      )}
+    </div>
+    </>
+  );
+}
+
+/* ══════════════════════════════════════
+   APP
+══════════════════════════════════════ */
+function App(){
+  const [showSim,setShowSim]=useState(false);
+  useEffect(()=>{
+    document.body.style.overflow=showSim?"hidden":"";
+    return()=>{document.body.style.overflow="";};
+  },[showSim]);
+  return(
+    <>
+      <PricingPage onSimular={()=>setShowSim(true)}/>
+      {showSim&&(
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowSim(false);}} ref={el=>{if(el) el.scrollTop=0;}}>
+          <div className="modal-box">
+            <button className="modal-close" onClick={()=>setShowSim(false)}>&#10005;</button>
+            <Simulator/>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
